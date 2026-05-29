@@ -4,7 +4,7 @@
  * Prepared statements for CRUD operations on the knowledge graph.
  */
 
-import { SqliteDatabase, SqliteStatement } from './sqlite-adapter';
+import type { SqliteDatabase, SqliteStatement } from './sqlite-adapter';
 import {
   Node,
   Edge,

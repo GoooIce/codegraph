@@ -46,7 +46,8 @@ import {
 import { GraphTraverser, GraphQueryManager } from './graph';
 import { ContextBuilder, createContextBuilder } from './context';
 import { Mutex, FileLock } from './utils';
-import { FileWatcher, WatchOptions, PendingFile, LockUnavailableError } from './sync';
+import { FileWatcher, LockUnavailableError } from './sync';
+import type { WatchOptions, PendingFile } from './sync';
 
 // Re-export types for consumers
 export * from './types';
@@ -57,9 +58,10 @@ export {
   findNearestCodeGraphRoot,
   CODEGRAPH_DIR,
 } from './directory';
-export { IndexProgress, IndexResult, SyncResult } from './extraction';
+export type { IndexProgress, IndexResult, SyncResult } from './extraction';
 export { detectLanguage, isLanguageSupported, isGrammarLoaded, getSupportedLanguages, initGrammars, loadGrammarsForLanguages, loadAllGrammars } from './extraction';
-export { ResolutionResult } from './resolution';
+export type { ResolutionResult } from './resolution';
+export type { Logger } from './errors';
 export {
   CodeGraphError,
   FileError,
@@ -68,14 +70,14 @@ export {
   SearchError,
   VectorError,
   ConfigError,
-  Logger,
   setLogger,
   getLogger,
   silentLogger,
   defaultLogger,
 } from './errors';
 export { Mutex, FileLock, processInBatches, debounce, throttle, MemoryMonitor } from './utils';
-export { FileWatcher, WatchOptions, PendingFile, LockUnavailableError } from './sync';
+export { FileWatcher, LockUnavailableError } from './sync';
+export type { WatchOptions, PendingFile } from './sync';
 export { MCPServer } from './mcp';
 
 /**

@@ -20,7 +20,7 @@ export default defineConfig({
      */
     env: { CODEGRAPH_ALLOW_UNSAFE_NODE: '1' },
     coverage: {
-      provider: 'v8',
+      provider: 'istanbul',
       reporter: ['text', 'json', 'html'],
     },
   },

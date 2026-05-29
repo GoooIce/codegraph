@@ -1,5 +1,7 @@
 import { Worker } from 'worker_threads';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 const PHASE_NAMES: Record<string, string> = {
   scanning: 'Scanning files',
@@ -22,10 +24,22 @@ export interface ShimmerProgress {
 export function createShimmerProgress(): ShimmerProgress {
   let lastPhase = '';
 
-  const workerPath = path.join(__dirname, 'shimmer-worker.js');
-  const worker = new Worker(workerPath, {
-    workerData: { startTime: Date.now() },
-  });
+  // In compiled mode, worker code is embedded as a string constant.
+  // Write it to a temp file and pass the path to Worker.
+  // In dev mode, resolve from __dirname (Bun resolves .js → .ts).
+  let worker: Worker;
+  if (process.env.CODEGRAPH_COMPILED === '1') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { SHIMMER_WORKER_CODE } = require('../extraction/worker-code') as { SHIMMER_WORKER_CODE: string };
+    const tmpFile = path.join(os.tmpdir(), `codegraph-shimmer-${Date.now()}.js`);
+    fs.writeFileSync(tmpFile, SHIMMER_WORKER_CODE);
+    worker = new Worker(tmpFile, { workerData: { startTime: Date.now() } });
+    worker.on('exit', () => { fs.unlinkSync(tmpFile); });
+  } else {
+    worker = new Worker(path.join(__dirname, 'shimmer-worker.js'), {
+      workerData: { startTime: Date.now() },
+    });
+  }
 
   return {
     onProgress(progress: IndexProgress) {

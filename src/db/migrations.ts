@@ -4,7 +4,7 @@
  * Schema versioning and migration support.
  */
 
-import { SqliteDatabase } from './sqlite-adapter';
+import type { SqliteDatabase } from './sqlite-adapter';
 
 /**
  * Current schema version

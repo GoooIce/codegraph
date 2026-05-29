@@ -669,9 +669,11 @@ export class ExtractionOrchestrator {
     }
 
     // Try to use a worker thread for parsing (keeps main thread unblocked for UI).
-    // Falls back to in-process parsing if the compiled worker is unavailable (e.g. tests).
-    const parseWorkerPath = path.join(__dirname, 'parse-worker.js');
-    const useWorker = fs.existsSync(parseWorkerPath);
+    // Falls back to in-process parsing in compiled mode (WASM path resolution
+    // across worker bundles is not yet supported) or when the worker is unavailable.
+    const isCompiled = process.env.CODEGRAPH_COMPILED === '1';
+    const parseWorkerJsPath = path.join(__dirname, 'parse-worker.js');
+    const useWorker = !isCompiled && fs.existsSync(parseWorkerJsPath);
     let WorkerClass: typeof import('worker_threads').Worker | null = null;
 
     if (useWorker) {
@@ -738,7 +740,7 @@ export class ExtractionOrchestrator {
     async function ensureWorker(): Promise<import('worker_threads').Worker> {
       if (parseWorker) return parseWorker;
       log('Spawning new parse worker...');
-      parseWorker = new WorkerClass!(parseWorkerPath);
+      parseWorker = new WorkerClass!(parseWorkerJsPath);
       attachWorkerHandlers(parseWorker);
 
       // Load grammars in the new worker

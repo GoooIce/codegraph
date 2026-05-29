@@ -4,13 +4,15 @@
  * Handles SQLite database initialization and connection management.
  */
 
-import { SqliteDatabase, SqliteBackend, createDatabase } from './sqlite-adapter';
+import type { SqliteDatabase, SqliteBackend } from './sqlite-adapter';
+import { createDatabase } from './sqlite-adapter';
 import * as fs from 'fs';
 import * as path from 'path';
 import { SchemaVersion } from '../types';
 import { runMigrations, getCurrentVersion, CURRENT_SCHEMA_VERSION } from './migrations';
+import { SCHEMA_SQL } from './schema';
 
-export { SqliteDatabase, SqliteBackend } from './sqlite-adapter';
+export type { SqliteDatabase, SqliteBackend } from './sqlite-adapter';
 
 /**
  * Apply connection-level PRAGMAs. Shared by `initialize` and `open` so the two
@@ -29,7 +31,7 @@ export { SqliteDatabase, SqliteBackend } from './sqlite-adapter';
 function configureConnection(db: SqliteDatabase): void {
   db.pragma('busy_timeout = 5000');      // MUST be first — see above
   db.pragma('foreign_keys = ON');
-  db.pragma('journal_mode = WAL');       // node:sqlite supports WAL on every platform
+  db.pragma('journal_mode = WAL');       // both node:sqlite and bun:sqlite support WAL on every platform
   db.pragma('synchronous = NORMAL');     // safe with WAL mode
   db.pragma('cache_size = -64000');      // 64 MB page cache
   db.pragma('temp_store = MEMORY');      // temp tables in memory
@@ -66,9 +68,7 @@ export class DatabaseConnection {
     configureConnection(db);
 
     // Run schema initialization
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
-    db.exec(schema);
+    db.exec(SCHEMA_SQL);
 
     // Record current schema version so migrations aren't re-applied on open
     const currentVersion = getCurrentVersion(db);

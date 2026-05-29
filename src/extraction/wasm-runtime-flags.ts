@@ -59,10 +59,12 @@ const RELAUNCH_GUARD_ENV = 'CODEGRAPH_WASM_RELAUNCHED';
  */
 export const HOST_PPID_ENV = 'CODEGRAPH_HOST_PPID';
 
-/** True when every required WASM runtime flag is already present in `execArgv`. */
+/** True when every required WASM runtime flag is already present in `execArgv`.
+ *  Always returns true under Bun (JavaScriptCore has no turboshaft Zone OOM). */
 export function processHasWasmRuntimeFlags(
   execArgv: readonly string[] = process.execArgv
 ): boolean {
+  if ('bun' in process.versions) return true;
   return WASM_RUNTIME_FLAGS.every((flag) => execArgv.includes(flag));
 }
 

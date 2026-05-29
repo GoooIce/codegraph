@@ -2157,6 +2157,7 @@ export class ToolHandler {
       } catch { /* closed instance — leave as is */ }
     }
     const stats = cg.getStats();
+    const backend = cg.getBackend();
 
     // Warn when this index actually belongs to a different git working tree
     // (e.g. the server resolved up from a nested worktree to the main checkout).
@@ -2179,12 +2180,14 @@ export class ToolHandler {
       `**Database size:** ${(stats.dbSizeBytes / 1024 / 1024).toFixed(2)} MB`,
     );
 
-    // Surface the active SQLite backend (node:sqlite, Node's built-in real
-    // SQLite — full WAL + FTS5, no native build).
-    lines.push(`**Backend:** node:sqlite (Node built-in) — full WAL + FTS5`);
+    // Surface the active SQLite backend.
+    const backendStr = backend === 'bun-sqlite'
+      ? 'bun:sqlite (Bun built-in) — full WAL + FTS5'
+      : 'node:sqlite (Node built-in) — full WAL + FTS5';
+    lines.push(`**Backend:** ${backendStr}`);
 
     // Effective journal mode. 'wal' ⇒ concurrent reads never block on a writer;
-    // anything else ⇒ they can ("database is locked"). node:sqlite supports WAL
+    // anything else ⇒ they can ("database is locked"). Both backends support WAL
     // everywhere, so a non-wal mode means the filesystem can't (network/
     // virtualized mounts, WSL2 /mnt). See issue #238.
     const journalMode = cg.getJournalMode();

@@ -100,7 +100,7 @@ function parsePpidPollMs(raw: string | undefined): number {
 }
 
 /**
- * Parse the host PID propagated across the `--liftoff-only` re-exec
+ * Parse the host PID propagated across re-exec
  * ({@link HOST_PPID_ENV}). Returns a positive integer PID, or null when
  * unset/invalid — the direct-launch path, where the watchdog falls back to
  * `process.ppid` divergence. PIDs of 0/1 are rejected (0 = unknown, 1 = init,
@@ -151,9 +151,9 @@ function resolveDaemonRoot(explicitPath: string | null): string | null {
  * session/process group (so a SIGHUP/SIGINT to the launcher's terminal can't
  * reach it) with stdio decoupled from the launcher (logs to
  * `.codegraph/daemon.log`). Re-invokes the *same* CLI faithfully across dev and
- * bundled launches by reusing `process.argv[0]` (the right node), the current
- * `process.execArgv` (carries `--liftoff-only`, so the daemon never re-execs)
- * and `process.argv[1]` (this script). The spawned process self-arbitrates the
+ * bundled launches by reusing `process.argv[0]` (the runtime binary), the current
+ * `process.execArgv` (so the daemon inherits runtime flags) and `process.argv[1]`
+ * (this script). The spawned process self-arbitrates the
  * O_EXCL lock, so racing launchers may each spawn one — losers exit and every
  * launcher proxies through the single winner.
  */
@@ -174,9 +174,15 @@ function spawnDetachedDaemon(root: string): void {
     stdio = 'ignore'; // no log file — discard daemon output rather than fail
   }
   try {
+    // Under Bun, execPath is `bun` and execArgv is empty (no V8 flags).
+    // Use `bun run <script>` to correctly invoke the CLI.
+    const isBunRuntime = 'bun' in process.versions;
+    const spawnArgs = isBunRuntime
+      ? ['run', scriptPath, 'serve', '--mcp', '--path', root]
+      : [...process.execArgv, scriptPath, 'serve', '--mcp', '--path', root];
     const child = spawn(
       process.execPath,
-      [...process.execArgv, scriptPath, 'serve', '--mcp', '--path', root],
+      spawnArgs,
       {
         detached: true,
         stdio,

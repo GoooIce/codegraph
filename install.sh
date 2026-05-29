@@ -2,9 +2,9 @@
 #
 # CodeGraph standalone installer.
 #
-# Downloads a self-contained bundle (a vendored Node runtime + the app) from
-# GitHub Releases. No Node.js, no build tools, no npm required — ideal for a
-# fresh Linux VPS over SSH.
+# Downloads a self-contained Bun-compiled binary from GitHub Releases.
+# No runtime dependencies — the binary includes the Bun/JavaScriptCore runtime,
+# all WASM grammars, and the full application.
 #
 #   curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
 #
@@ -28,7 +28,7 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-# 1. Detect platform → target triple matching the release archives.
+# 1. Detect platform → target triple matching the release binaries.
 os="$(uname -s)"
 arch="$(uname -m)"
 case "$os" in
@@ -44,12 +44,6 @@ esac
 target="${os}-${arch}"
 
 # 2. Resolve the version (latest release unless pinned).
-#
-# Resolve "latest" from the releases/latest *web* redirect, not the GitHub API:
-# the unauthenticated API is rate-limited to 60 requests/hour per IP and returns
-# 403 once exhausted — routine on shared/cloud hosts and CI (issue #325). The
-# redirect (github.com/<repo>/releases/latest -> .../releases/tag/vX.Y.Z) has no
-# such limit. Fall back to the API if the redirect can't be read.
 version="${CODEGRAPH_VERSION:-}"
 if [ -z "$version" ]; then
   version="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" \
@@ -60,28 +54,27 @@ if [ -z "$version" ]; then
     | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)"
 fi
 [ -n "$version" ] || { echo "codegraph: could not resolve latest version; set CODEGRAPH_VERSION (e.g. CODEGRAPH_VERSION=v0.9.4)." >&2; exit 1; }
-# Release tags are vX.Y.Z; accept a bare X.Y.Z in CODEGRAPH_VERSION too.
 case "$version" in v*) ;; *) version="v$version" ;; esac
 
-# 3. Download + extract the bundle.
-url="https://github.com/$REPO/releases/download/$version/codegraph-${target}.tar.gz"
+# 3. Download the binary.
+url="https://github.com/$REPO/releases/download/$version/codegraph-${target}"
 echo "Installing CodeGraph $version ($target)..."
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-curl -fsSL "$url" -o "$tmp/cg.tar.gz" || { echo "codegraph: download failed: $url" >&2; exit 1; }
+curl -fsSL "$url" -o "$tmp/codegraph" || { echo "codegraph: download failed: $url" >&2; exit 1; }
+chmod +x "$tmp/codegraph"
 
+# 4. Install binary and create symlink.
 dest="$INSTALL_DIR/versions/$version"
 rm -rf "$dest"
 mkdir -p "$dest"
-# Archives contain a top-level codegraph-<target>/ dir; strip it.
-tar -xzf "$tmp/cg.tar.gz" -C "$dest" --strip-components=1
+mv "$tmp/codegraph" "$dest/codegraph"
 
-# 4. Symlink the launcher onto PATH and mark the current version.
 mkdir -p "$BIN_DIR"
-ln -sf "$dest/bin/codegraph" "$BIN_DIR/codegraph"
+ln -sf "$dest/codegraph" "$BIN_DIR/codegraph"
 ln -sfn "$dest" "$INSTALL_DIR/current"
 
-echo "Installed to $dest"
+echo "Installed to $dest/codegraph"
 echo "Linked     $BIN_DIR/codegraph"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;

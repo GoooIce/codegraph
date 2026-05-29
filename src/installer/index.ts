@@ -42,11 +42,16 @@ export {
 } from './config-writer';
 export type { InstallLocation } from './config-writer';
 
-// Dynamic import helper — tsc compiles import() to require() in CJS mode,
-// which fails for ESM-only packages. This bypasses the transformation.
-// eslint-disable-next-line @typescript-eslint/no-implied-eval
-const importESM = new Function('specifier', 'return import(specifier)') as
-  (specifier: string) => Promise<typeof import('@clack/prompts')>;
+// Dynamic import helper for ESM-only packages. The specifier must be a
+// known string literal so bun's bundler can resolve and include the module
+// in the compiled binary. A bare `import(variable)` is not statically
+// analyzable and the module goes missing at runtime.
+const importESM = async (specifier: string): Promise<any> => {
+  switch (specifier) {
+    case '@clack/prompts': return import('@clack/prompts');
+    default: return import(specifier);
+  }
+};
 
 function formatNumber(n: number): string {
   return n.toLocaleString();

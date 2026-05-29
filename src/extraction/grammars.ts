@@ -7,8 +7,33 @@
  */
 
 import * as path from 'path';
-import { Parser, Language as WasmLanguage } from 'web-tree-sitter';
 import { Language } from '../types';
+import { getWasmPath } from './wasm-paths';
+
+/**
+ * web-tree-sitter loader.
+ *
+ * Under Node, the CJS require() path works fine. Under Bun, `require("web-tree-sitter")`
+ * returns an empty object (Bun's CJS interop doesn't expand the __toCommonJS pattern the
+ * package uses). Work around it with a dynamic ESM import when running under Bun.
+ */
+type WasmTreeSitter = typeof import('web-tree-sitter');
+
+let _wts: WasmTreeSitter | null = null;
+
+async function loadWts(): Promise<WasmTreeSitter> {
+  if (_wts) return _wts;
+  if ('bun' in process.versions) {
+    // Bun resolves 'web-tree-sitter' to src/web-tree-sitter.d.ts (from
+    // tsconfig paths), which has no runtime exports. Load the actual CJS
+    // file from node_modules directly.
+    const pkgDir = path.dirname(require.resolve('web-tree-sitter/package.json'));
+    _wts = require(path.join(pkgDir, 'tree-sitter.cjs'));
+  } else {
+    _wts = require('web-tree-sitter');
+  }
+  return _wts!;
+}
 
 export type GrammarLanguage = Exclude<Language, 'svelte' | 'vue' | 'liquid' | 'yaml' | 'twig' | 'xml' | 'properties' | 'unknown'>;
 
@@ -132,8 +157,8 @@ export function isPlayRoutesFile(filePath: string): boolean {
 /**
  * Caches for loaded grammars and parsers
  */
-const parserCache = new Map<Language, Parser>();
-const languageCache = new Map<Language, WasmLanguage>();
+const parserCache = new Map<Language, InstanceType<WasmTreeSitter['Parser']>>();
+const languageCache = new Map<Language, InstanceType<WasmTreeSitter['Language']>>();
 const unavailableGrammarErrors = new Map<Language, string>();
 
 let parserInitialized = false;
@@ -146,7 +171,8 @@ let parserInitialized = false;
 export async function initGrammars(): Promise<void> {
   if (parserInitialized) return;
 
-  await Parser.init();
+  const wts = await loadWts();
+  await wts.Parser.init();
 
   parserInitialized = true;
 }
@@ -174,15 +200,8 @@ export async function loadGrammarsForLanguages(languages: Language[]): Promise<v
   for (const lang of toLoad) {
     const wasmFile = WASM_GRAMMAR_FILES[lang];
     try {
-      // Some grammars ship their own WASMs (not in tree-sitter-wasms, or the
-      // tree-sitter-wasms build is too old). Lua: tree-sitter-wasms ships an
-      // ABI-13 build that corrupts the shared WASM heap under web-tree-sitter
-      // 0.25 (drops nested calls/imports on every file after the first); we
-      // vendor the upstream ABI-15 wasm instead.
-      const wasmPath = (lang === 'pascal' || lang === 'scala' || lang === 'lua' || lang === 'luau')
-        ? path.join(__dirname, 'wasm', wasmFile)
-        : require.resolve(`tree-sitter-wasms/out/${wasmFile}`);
-      const language = await WasmLanguage.load(wasmPath);
+      const wasmPath = getWasmPath(lang, wasmFile);
+      const language = await (await loadWts()).Language.load(wasmPath);
       languageCache.set(lang, language);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -212,7 +231,7 @@ export function isGrammarsInitialized(): boolean {
  * Get a parser for the specified language.
  * Returns synchronously from pre-loaded cache.
  */
-export function getParser(language: Language): Parser | null {
+export function getParser(language: Language): InstanceType<WasmTreeSitter['Parser']> | null {
   if (parserCache.has(language)) {
     return parserCache.get(language)!;
   }
@@ -222,7 +241,8 @@ export function getParser(language: Language): Parser | null {
     return null;
   }
 
-  const parser = new Parser();
+  const wts = _wts!;
+  const parser = new wts.Parser();
   parser.setLanguage(lang);
   parserCache.set(language, parser);
   return parser;

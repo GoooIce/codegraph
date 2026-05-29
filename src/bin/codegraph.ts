@@ -47,11 +47,16 @@ async function loadCodeGraph(): Promise<typeof import('../index')> {
   }
 }
 
-// Dynamic import helper — tsc compiles import() to require() in CJS mode,
-// which fails for ESM-only packages. This bypasses the transformation.
-// eslint-disable-next-line @typescript-eslint/no-implied-eval
-const importESM = new Function('specifier', 'return import(specifier)') as
-  (specifier: string) => Promise<typeof import('@clack/prompts')>;
+// Dynamic import helper for ESM-only packages. The specifier must be a
+// known string literal so bun's bundler can resolve and include the module
+// in the compiled binary. A bare `import(variable)` is not statically
+// analyzable and the module goes missing at runtime.
+const importESM = async (specifier: string): Promise<any> => {
+  switch (specifier) {
+    case '@clack/prompts': return import('@clack/prompts');
+    default: return import(specifier);
+  }
+};
 
 // Block CodeGraph on Node.js 25.x — V8's turboshaft WASM JIT has a Zone
 // allocator bug that reliably crashes when compiling tree-sitter
@@ -60,24 +65,28 @@ const importESM = new Function('specifier', 'return import(specifier)') as
 // later, leading to a steady stream of "what is this OOM" reports.
 // Hard-exit before any WASM work; allow override via env var for users
 // who patched V8 themselves or want to test a future fix.
-const nodeVersion = process.versions.node;
-const nodeMajor = parseInt(nodeVersion.split('.')[0] ?? '0', 10);
-if (nodeMajor >= 25) {
-  process.stderr.write(buildNode25BlockBanner(nodeVersion) + '\n');
-  if (!process.env.CODEGRAPH_ALLOW_UNSAFE_NODE) {
-    process.exit(1);
+// Bun uses JavaScriptCore (not V8), so the turboshaft Zone OOM does not apply.
+const isBunRuntime = 'bun' in process.versions;
+if (!isBunRuntime) {
+  const nodeVersion = process.versions.node;
+  const nodeMajor = parseInt(nodeVersion.split('.')[0] ?? '0', 10);
+  if (nodeMajor >= 25) {
+    process.stderr.write(buildNode25BlockBanner(nodeVersion) + '\n');
+    if (!process.env.CODEGRAPH_ALLOW_UNSAFE_NODE) {
+      process.exit(1);
+    }
+    // Override active — banner shown for visibility, continuing.
   }
-  // Override active — banner shown for visibility, continuing.
-}
-// Enforce the supported Node floor. `engines` in package.json only *warns* on
-// install (unless engine-strict), so hard-block here to actually keep users off
-// unsupported versions. Mirrors the 25+ block above. See package.json `engines`.
-if (nodeMajor < MIN_NODE_MAJOR) {
-  process.stderr.write(buildNodeTooOldBanner(nodeVersion) + '\n');
-  if (!process.env.CODEGRAPH_ALLOW_UNSAFE_NODE) {
-    process.exit(1);
+  // Enforce the supported Node floor. `engines` in package.json only *warns* on
+  // install (unless engine-strict), so hard-block here to actually keep users off
+  // unsupported versions. Mirrors the 25+ block above. See package.json `engines`.
+  if (nodeMajor < MIN_NODE_MAJOR) {
+    process.stderr.write(buildNodeTooOldBanner(nodeVersion) + '\n');
+    if (!process.env.CODEGRAPH_ALLOW_UNSAFE_NODE) {
+      process.exit(1);
+    }
+    // Override active — banner shown for visibility, continuing.
   }
-  // Override active — banner shown for visibility, continuing.
 }
 
 // Re-exec with V8's `--liftoff-only` if it isn't already set, so tree-sitter's
@@ -760,14 +769,16 @@ program
       console.log(`  Nodes:     ${formatNumber(stats.nodeCount)}`);
       console.log(`  Edges:     ${formatNumber(stats.edgeCount)}`);
       console.log(`  DB Size:   ${(stats.dbSizeBytes / 1024 / 1024).toFixed(2)} MB`);
-      // Surface the active SQLite backend (node:sqlite — Node's built-in real
-      // SQLite, full WAL + FTS5, no native build).
-      const backendLabel = chalk.green(`node:sqlite ${getGlyphs().dash} built-in (full WAL)`);
+      // Surface the active SQLite backend.
+      const backendStr = backend === 'bun-sqlite'
+        ? `bun:sqlite ${getGlyphs().dash} built-in (full WAL)`
+        : `node:sqlite ${getGlyphs().dash} built-in (full WAL)`;
+      const backendLabel = chalk.green(backendStr);
       console.log(`  Backend:   ${backendLabel}`);
       // Effective journal mode: 'wal' means concurrent reads never block on a
-      // writer; anything else means they can ("database is locked"). node:sqlite
-      // supports WAL everywhere, so a non-wal mode means the filesystem can't
-      // (network mounts, WSL2 /mnt). See issue #238.
+      // writer; anything else means they can ("database is locked"). Both
+      // backends support WAL everywhere, so a non-wal mode means the
+      // filesystem can't (network mounts, WSL2 /mnt). See issue #238.
       const journalLabel = journalMode === 'wal'
         ? chalk.green('wal')
         : chalk.yellow(`${journalMode || 'unknown'} ${getGlyphs().dash} WAL inactive; reads can block on writes`);

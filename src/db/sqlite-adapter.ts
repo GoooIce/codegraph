@@ -1,13 +1,9 @@
 /**
  * SQLite Adapter
  *
- * Thin wrapper over Node's built-in `node:sqlite` (`DatabaseSync`), exposed
- * through a small better-sqlite3-shaped interface so the rest of the codebase
- * is storage-agnostic.
- *
- * CodeGraph ships with a bundled Node runtime, so `node:sqlite` (real SQLite,
- * with WAL + FTS5) is always available — there is no native build step and no
- * wasm fallback. When run from source instead, it requires Node >= 22.5.
+ * Thin wrapper over `node:sqlite` or `bun:sqlite`, exposed through a small
+ * better-sqlite3-shaped interface so the rest of the codebase is
+ * storage-agnostic. Runtime detection selects the correct backend.
  */
 
 export interface SqliteStatement {
@@ -26,10 +22,10 @@ export interface SqliteDatabase {
 }
 
 /**
- * The active SQLite backend. Only one now (`node:sqlite`); kept as a named type
- * so `codegraph status` and the per-instance reporting have a stable shape.
+ * The active SQLite backend. Kept as a named type so `codegraph status` and
+ * per-instance reporting have a stable shape.
  */
-export type SqliteBackend = 'node-sqlite';
+export type SqliteBackend = 'node-sqlite' | 'bun-sqlite';
 
 /**
  * Wraps Node's built-in `node:sqlite` (`DatabaseSync`) to match the
@@ -118,6 +114,92 @@ class NodeSqliteAdapter implements SqliteDatabase {
 }
 
 /**
+ * Wraps Bun's built-in `bun:sqlite` (`Database`) to match the SqliteDatabase
+ * interface. bun:sqlite supports WAL, FTS5, mmap, and transactions natively.
+ * Key differences from node:sqlite:
+ *  - No `isOpen` property — track open state manually.
+ *  - `@named` params need the `@` prefix in the object key.
+ *  - Statement.run() returns `{ changes, lastInsertRowid }` (same shape).
+ */
+class BunSqliteAdapter implements SqliteDatabase {
+  private _db: any;
+  private _open: boolean = true;
+
+  constructor(dbPath: string) {
+    // Dynamic require so Node never tries to resolve 'bun:sqlite'.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Database } = require('bun:sqlite');
+    this._db = new Database(dbPath);
+  }
+
+  get open(): boolean {
+    return this._open;
+  }
+
+  prepare(sql: string): SqliteStatement {
+    const stmt = this._db.prepare(sql);
+    // bun:sqlite requires the SQL parameter prefix (@, $, :) on the
+    // object key when using named parameters. The codebase uses @param
+    // style universally, but callers pass bare keys ({ kind: ... } not
+    // { "@kind": ... }). Prefix them here so both styles work.
+    const prefixParams = (params: any[]): any[] =>
+      params.map(p => {
+        if (p && typeof p === 'object' && !Array.isArray(p) && !(p instanceof Date)) {
+          const obj: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(p)) {
+            obj[key.startsWith('@') || key.startsWith('$') || key.startsWith(':') ? key : `@${key}`] = value;
+          }
+          return obj;
+        }
+        return p;
+      });
+    return {
+      run(...params: any[]) {
+        const r = stmt.run(...prefixParams(params));
+        return {
+          changes: Number(r?.changes ?? 0),
+          lastInsertRowid: r?.lastInsertRowid ?? 0,
+        };
+      },
+      get(...params: any[]) {
+        return stmt.get(...prefixParams(params));
+      },
+      all(...params: any[]) {
+        return stmt.all(...prefixParams(params));
+      },
+    };
+  }
+
+  exec(sql: string): void {
+    this._db.exec(sql);
+  }
+
+  pragma(str: string, options?: { simple?: boolean }): any {
+    const trimmed = str.trim();
+    if (trimmed.includes('=')) {
+      this._db.exec(`PRAGMA ${trimmed}`);
+      return;
+    }
+    const row = this._db.query(`PRAGMA ${trimmed}`).get();
+    if (options?.simple) {
+      return row && typeof row === 'object' ? Object.values(row)[0] : row;
+    }
+    return row;
+  }
+
+  transaction<T>(fn: (...args: any[]) => T): (...args: any[]) => T {
+    return this._db.transaction(fn);
+  }
+
+  close(): void {
+    if (this._open) {
+      this._db.close();
+      this._open = false;
+    }
+  }
+}
+
+/**
  * Create a database connection backed by `node:sqlite`.
  *
  * Returns the active backend alongside the db so each `DatabaseConnection` can
@@ -126,13 +208,17 @@ class NodeSqliteAdapter implements SqliteDatabase {
  */
 export function createDatabase(dbPath: string): { db: SqliteDatabase; backend: SqliteBackend } {
   try {
+    if ('bun' in process.versions) {
+      return { db: new BunSqliteAdapter(dbPath), backend: 'bun-sqlite' };
+    }
     return { db: new NodeSqliteAdapter(dbPath), backend: 'node-sqlite' };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
+    const runtime = 'bun' in process.versions ? 'bun:sqlite' : 'node:sqlite';
     throw new Error(
-      'Failed to open SQLite via the built-in node:sqlite module.\n' +
-      'CodeGraph requires node:sqlite (Node.js 22.5+). Install the self-contained\n' +
-      'CodeGraph release (it bundles a compatible Node), or run on Node 22.5+.\n' +
+      `Failed to open SQLite via ${runtime}.\n` +
+      'Install the self-contained CodeGraph release (it bundles a compatible runtime),\n' +
+      'or ensure you are running on a supported Node.js (>= 22.5) or Bun version.\n' +
       `Underlying error: ${msg}`
     );
   }

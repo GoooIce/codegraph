@@ -10,26 +10,40 @@ Distributed as `@colbymchenry/codegraph` on npm; same binary serves as installer
 
 ## Build, Test, Run
 
+Development uses **Bun** as the runtime/package manager. Distribution still bundles a Node runtime for end users.
+
 ```bash
-npm run build           # tsc + copy schema.sql and *.wasm into dist/; chmods dist/bin/codegraph.js
-npm run dev             # tsc --watch
-npm run clean           # rm -rf dist
+bun install             # install dependencies
+bun run build           # tsc + copy schema.sql and *.wasm into dist/; chmods dist/bin/codegraph.js
+bun run dev             # tsc --watch
+bun run clean           # rm -rf dist
 
-npm test                # vitest run (all)
-npm run test:watch
-npm run test:eval       # only __tests__/evaluation/
-npm run eval            # build then run __tests__/evaluation/runner.ts via tsx
+bun test                # vitest run (all)
+bun run test:watch
+bun run test:eval       # only __tests__/evaluation/
+bun run eval            # build then run __tests__/evaluation/runner.ts
 
-npm run cli             # build then run the local dist binary
+bun run cli             # build then run the local dist binary
 
 # Single test file / pattern
-npx vitest run __tests__/installer-targets.test.ts
-npx vitest run __tests__/extraction.test.ts -t "TypeScript"
+bun vitest run __tests__/installer-targets.test.ts
+bun vitest run __tests__/extraction.test.ts -t "TypeScript"
+
+# Node fallback (still works)
+npm run build && npm test
 ```
 
 `copy-assets` (called from `build`) copies `src/db/schema.sql` and all `src/extraction/wasm/*.wasm` files into `dist/`. **Any new SQL or grammar wasm must be copied or it won't ship.**
 
-Node engines: `>=18.0.0 <25.0.0`. There is a hard exit on Node 25.x (see `src/bin/node-version-check.ts`).
+### Dual SQLite backend
+
+The DB layer (`src/db/sqlite-adapter.ts`) supports two backends:
+- **`node:sqlite`** (`DatabaseSync`) — used when running under Node (bundled distribution, CI)
+- **`bun:sqlite`** (`Database`) — used when running under Bun (development)
+
+Runtime detection: `'bun' in process.versions` selects `bun:sqlite`. Both backends support WAL, FTS5, mmap, and transactions.
+
+Node engines: `>=20.0.0 <25.0.0`. There is a hard exit on Node 25.x (see `src/bin/node-version-check.ts`). Bun is not subject to this gate (JavaScriptCore has no V8 turboshaft Zone OOM).
 
 ## Architecture
 
