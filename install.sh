@@ -6,7 +6,7 @@
 # No runtime dependencies — the binary includes the Bun/JavaScriptCore runtime,
 # all WASM grammars, and the full application.
 #
-#   curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/GoooIce/codegraph/main/install.sh | sh
 #
 # Upgrade:   re-run the same command.
 # Uninstall: curl -fsSL .../install.sh | sh -s -- --uninstall
@@ -17,7 +17,7 @@
 #   CODEGRAPH_BIN_DIR      symlink location  (default: ~/.local/bin)
 set -eu
 
-REPO="colbymchenry/codegraph"
+REPO="GoooIce/codegraph"
 INSTALL_DIR="${CODEGRAPH_INSTALL_DIR:-$HOME/.codegraph}"
 BIN_DIR="${CODEGRAPH_BIN_DIR:-$HOME/.local/bin}"
 

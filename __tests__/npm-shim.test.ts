@@ -39,12 +39,12 @@ function mkTmp(label: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `cg-shim-${label}-`));
 }
 
-// A temp dir standing in for the installed @colbymchenry/codegraph main package.
+// A temp dir standing in for the installed @GoooIce/codegraph main package.
 function makePkg(version = '9.9.9-test'): string {
   const dir = mkTmp('pkg');
   fs.copyFileSync(SHIM_SRC, path.join(dir, 'npm-shim.js'));
   fs.writeFileSync(path.join(dir, 'package.json'),
-    JSON.stringify({ name: '@colbymchenry/codegraph', version }) + '\n');
+    JSON.stringify({ name: '@GoooIce/codegraph', version }) + '\n');
   return dir;
 }
 
@@ -77,7 +77,7 @@ describe.skipIf(isWindows)('npm-shim launcher', () => {
     const platformPkg = path.join(pkg, 'node_modules', '@colbymchenry', `codegraph-${target}`);
     writeLauncher(path.join(platformPkg, 'bin'));
     fs.writeFileSync(path.join(platformPkg, 'package.json'),
-      JSON.stringify({ name: `@colbymchenry/codegraph-${target}`, version: '9.9.9-test' }) + '\n');
+      JSON.stringify({ name: `@GoooIce/codegraph-${target}`, version: '9.9.9-test' }) + '\n');
     const cache = mkTmp('cache');
     const r = await runShim(pkg, ['--probe-abc'], { CODEGRAPH_INSTALL_DIR: cache });
 
@@ -112,7 +112,7 @@ describe.skipIf(isWindows)('npm-shim launcher', () => {
 
     expect(r.status).toBe(1);
     expect(r.stderr).toContain(`no prebuilt bundle for ${target}`);
-    expect(r.stderr).toContain(`@colbymchenry/codegraph-${target}`);
+    expect(r.stderr).toContain(`@GoooIce/codegraph-${target}`);
     expect(r.stderr).toContain('--registry=https://registry.npmjs.org');
     expect(r.stderr).toContain('install.sh');
   });

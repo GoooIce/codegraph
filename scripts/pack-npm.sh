@@ -5,7 +5,7 @@
 # Produces, under release/npm/:
 #   codegraph-<target>/   one per built binary — the standalone executable,
 #                         tagged with os/cpu so npm installs only the matching one.
-#   main/                 the @colbymchenry/codegraph shim package: a tiny bin
+#   main/                 the @goooice/codegraph shim package: a tiny bin
 #                         that execs the matching platform binary, with every
 #                         platform package in optionalDependencies.
 #
@@ -17,7 +17,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:-$(node -p "require('$ROOT/package.json').version")}"
-SCOPE="@colbymchenry"
+SCOPE="@goooice"
 REL="$ROOT/release"
 NPM="$REL/npm"
 

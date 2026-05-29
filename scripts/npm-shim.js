@@ -4,7 +4,7 @@
 // npm thin-installer launcher for CodeGraph.
 //
 // The heavy artifact is a per-platform standalone binary (Bun-compiled) shipped
-// as an optionalDependency: @colbymchenry/codegraph-<platform>-<arch>. npm installs
+// as an optionalDependency: @goooice/codegraph-<platform>-<arch>. npm installs
 // only the one matching the host, via each package's `os`/`cpu` fields (the esbuild
 // pattern). This shim — run by the user's OWN Node — locates that binary and execs
 // it. The user's Node is only ever a launcher; even an ancient version can run this
@@ -27,7 +27,7 @@ var path = require('path');
 
 var target = process.platform + '-' + process.arch;
 var isWindows = process.platform === 'win32';
-var REPO = 'colbymchenry/codegraph';
+var REPO = 'GoooIce/codegraph';
 
 main().catch(function (e) {
   process.stderr.write('codegraph: ' + (e && e.message ? e.message : String(e)) + '\n');
@@ -46,7 +46,7 @@ async function main() {
 
 function resolveInstalledBinary() {
   try {
-    var pkg = '@colbymchenry/codegraph-' + target;
+    var pkg = '@goooice/codegraph-' + target;
     var binary = require.resolve(pkg + '/bin/codegraph' + (isWindows ? '.exe' : ''));
     return { command: binary, args: process.argv.slice(2) };
   } catch (e) {
@@ -77,7 +77,7 @@ async function selfHealBinary() {
   var url = base + '/v' + version + '/' + asset;
 
   process.stderr.write(
-    'codegraph: platform binary missing (registry did not provide @colbymchenry/codegraph-' + target + ').\n' +
+    'codegraph: platform binary missing (registry did not provide @goooice/codegraph-' + target + ').\n' +
     'codegraph: downloading ' + asset + ' from GitHub Releases (' + version + ')...\n'
   );
 
@@ -153,11 +153,11 @@ function fail(reason) {
   process.stderr.write(
     'codegraph: no prebuilt binary for ' + target + '.\n' +
     (reason ? 'codegraph: ' + reason + '\n' : '') +
-    'Expected the optional package @colbymchenry/codegraph-' + target + ' to be installed.\n' +
+    'Expected the optional package @goooice/codegraph-' + target + ' to be installed.\n' +
     'A registry mirror (e.g. npmmirror/cnpm) that did not mirror the per-platform\n' +
     'package is the usual cause. Fixes:\n' +
     '  - install from the official registry:\n' +
-    '      npm i -g @colbymchenry/codegraph --registry=https://registry.npmjs.org\n' +
+    '      npm i -g @goooice/codegraph --registry=https://registry.npmjs.org\n' +
     '  - or use the standalone installer (no Node required):\n' +
     '      curl -fsSL https://raw.githubusercontent.com/' + REPO + '/main/install.sh | sh\n'
   );

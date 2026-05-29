@@ -9,17 +9,17 @@ Get up and running with CodeGraph in seconds.
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/GoooIce/codegraph/main/install.sh | sh
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/GoooIce/codegraph/main/install.ps1 | iex
 ```
 
 ## Already have Node? Use npm instead (works on any version)
 
 ```bash
-npx @colbymchenry/codegraph        # zero-install, or:
-npm i -g @colbymchenry/codegraph
+npx @GoooIce/codegraph        # zero-install, or:
+npm i -g @GoooIce/codegraph
 ```
 
 CodeGraph bundles its own runtime — nothing to compile, no native build, works the same everywhere. The interactive installer auto-configures your agent(s) — Claude Code, Cursor, Codex CLI, opencode, Hermes Agent, Gemini CLI, Antigravity IDE, Kiro.

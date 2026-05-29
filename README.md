@@ -6,9 +6,9 @@
 
 **~35% cheaper · ~70% fewer tool calls · 100% local**
 
-### [Documentation & Website →](https://colbymchenry.github.io/codegraph/)
+### [Documentation & Website →](https://goooice.github.io/codegraph/)
 
-[![npm version](https://img.shields.io/npm/v/@colbymchenry/codegraph.svg)](https://www.npmjs.com/package/@colbymchenry/codegraph)
+[![npm version](https://img.shields.io/npm/v/@GoooIce/codegraph.svg)](https://www.npmjs.com/package/@GoooIce/codegraph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Self-contained](https://img.shields.io/badge/Node.js-bundled%20%C2%B7%20none%20required-brightgreen.svg)](https://nodejs.org/)
 
@@ -33,17 +33,17 @@
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/GoooIce/codegraph/main/install.sh | sh
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/GoooIce/codegraph/main/install.ps1 | iex
 ```
 
 Already have Node? Use npm instead (works on any version):
 
 ```bash
-npx @colbymchenry/codegraph        # zero-install, or:
-npm i -g @colbymchenry/codegraph
+npx @GoooIce/codegraph        # zero-install, or:
+npm i -g @GoooIce/codegraph
 ```
 
 <sub>CodeGraph bundles its own runtime — nothing to compile, no native build, works the same everywhere. The interactive installer auto-configures your agent(s) — Claude Code, Cursor, Codex CLI, opencode, Hermes Agent, Gemini CLI, Antigravity IDE, Kiro.</sub>
@@ -166,7 +166,7 @@ agent writes src/Widget.ts
 
 The handful of cases where manual `codegraph sync` makes sense: the watcher is disabled (sandboxed environments, or `CODEGRAPH_NO_DAEMON=1`), or you're scripting against the index outside an agent session and want a pre-flight sync at the start of your script.
 
-→ Full deep-dive in [Guides → Indexing a Project](https://colbymchenry.github.io/codegraph/guides/indexing/#stay-fresh-automatically).
+→ Full deep-dive in [Guides → Indexing a Project](https://goooice.github.io/codegraph/guides/indexing/#stay-fresh-automatically).
 
 </details>
 
@@ -229,7 +229,7 @@ Each bridge emits edges tagged `provenance:'heuristic'` with `metadata.synthesiz
 ### 1. Run the Installer
 
 ```bash
-npx @colbymchenry/codegraph
+npx @GoooIce/codegraph
 ```
 
 The installer will:
@@ -277,7 +277,7 @@ That's it — your agent will use CodeGraph tools automatically when a `.codegra
 
 **Install globally:**
 ```bash
-npm install -g @colbymchenry/codegraph
+npm install -g @GoooIce/codegraph
 ```
 
 **Add to `~/.claude.json`:**
@@ -458,7 +458,7 @@ When running as an MCP server, CodeGraph exposes these tools to Claude Code:
 ## Library Usage
 
 ```typescript
-import CodeGraph from '@colbymchenry/codegraph';
+import CodeGraph from '@GoooIce/codegraph';
 
 const cg = await CodeGraph.init('/path/to/project');
 // Or: const cg = await CodeGraph.open('/path/to/project');
@@ -563,7 +563,7 @@ the MCP server and writing its instructions file:
 
 **MCP hits `database is locked`** — current builds shouldn't: CodeGraph bundles its own Node runtime and uses Node's built-in `node:sqlite` in WAL mode, where concurrent reads never block on a writer. If you still see it:
 
-- **You're on an old (pre-0.9) install.** Reinstall to get the bundled runtime — `curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh` (macOS/Linux), `irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex` (Windows), or `npm i -g @colbymchenry/codegraph@latest`.
+- **You're on an old (pre-0.9) install.** Reinstall to get the bundled runtime — `curl -fsSL https://raw.githubusercontent.com/GoooIce/codegraph/main/install.sh | sh` (macOS/Linux), `irm https://raw.githubusercontent.com/GoooIce/codegraph/main/install.ps1 | iex` (Windows), or `npm i -g @GoooIce/codegraph@latest`.
 - **`codegraph status` shows `Journal:` other than `wal`** — WAL couldn't be enabled on this filesystem (common on network shares and WSL2 `/mnt`), so reads can block on writes. Move the project (with its `.codegraph/` folder) onto a local disk.
 
 **MCP server not connecting** — Ensure the project is initialized/indexed, verify the path in your MCP config, and check that `codegraph serve --mcp` works from the command line.
@@ -572,11 +572,11 @@ the MCP server and writing its instructions file:
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=colbymchenry%2Fcodegraph&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=GoooIce%2Fcodegraph&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=colbymchenry/codegraph&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=colbymchenry/codegraph&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=colbymchenry/codegraph&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=GoooIce/codegraph&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=GoooIce/codegraph&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=GoooIce/codegraph&type=date&legend=top-left" />
  </picture>
 </a>
 
@@ -590,6 +590,6 @@ MIT
 
 **Made for AI coding agents — Claude Code, Cursor, Codex CLI, opencode, Hermes Agent, Gemini CLI, Antigravity IDE, and Kiro**
 
-[Report Bug](https://github.com/colbymchenry/codegraph/issues) · [Request Feature](https://github.com/colbymchenry/codegraph/issues)
+[Report Bug](https://github.com/GoooIce/codegraph/issues) · [Request Feature](https://github.com/GoooIce/codegraph/issues)
 
 </div>
